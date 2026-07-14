@@ -1,0 +1,49 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "hermes-agent",
+  "elements": [
+    {"type": "rectangle", "id": "bg", "x": 0, "y": 0, "width": 900, "height": 600, "backgroundColor": "#f8f9fa", "fillStyle": "solid"},
+    {"type": "text", "id": "t_bg", "x": 420, "y": 30, "width": 200, "height": 25, "text": "Teams Search Stack Architecture", "fontSize": 24, "strokeColor": "#1e1e1e"},
+    
+    {"type": "rectangle", "id": "r1", "x": 50, "y": 80, "width": 180, "height": 80, "backgroundColor": "#a5d8ff", "fillStyle": "solid", "roundness": {"type": 3}},
+    {"type": "text", "id": "t_r1", "x": 55, "y": 85, "width": 170, "height": 25, "text": "User / Client", "fontSize": 20, "strokeColor": "#1e1e1e", "containerId": "r1"},
+    
+    {"type": "rectangle", "id": "r2", "x": 300, "y": 80, "width": 180, "height": 80, "backgroundColor": "#ffd8a8", "fillStyle": "solid", "roundness": {"type": 3}},
+    {"type": "text", "id": "t_r2", "x": 305, "y": 85, "width": 170, "height": 25, "text": "Caddy Proxy", "fontSize": 20, "strokeColor": "#1e1e1e", "containerId": "r2"},
+    
+    {"type": "rectangle", "id": "r3", "x": 520, "y": 80, "width": 180, "height": 80, "backgroundColor": "#b2f2bb", "fillStyle": "solid", "roundness": {"type": 3}},
+    {"type": "text", "id": "t_r3", "x": 525, "y": 85, "width": 170, "height": 25, "text": "SearXNG", "fontSize": 20, "strokeColor": "#1e1e1e", "containerId": "r3"},
+    
+    {"type": "rectangle", "id": "r4", "x": 50, "y": 220, "width": 180, "height": 80, "backgroundColor": "#a5d8ff", "fillStyle": "solid", "roundness": {"type": 3}},
+    {"type": "text", "id": "t_r4", "x": 55, "y": 225, "width": 170, "height": 25, "text": "Search API", "fontSize": 20, "strokeColor": "#1e1e1e", "containerId": "r4"},
+    
+    {"type": "rectangle", "id": "r5", "x": 300, "y": 220, "width": 180, "height": 80, "backgroundColor": "#d0bfff", "fillStyle": "solid", "roundness": {"type": 3}},
+    {"type": "text", "id": "t_r5", "x": 305, "y": 225, "width": 170, "height": 25, "text": "Scraper API", "fontSize": 20, "strokeColor": "#1e1e1e", "containerId": "r5"},
+    
+    {"type": "rectangle", "id": "r6", "x": 520, "y": 220, "width": 180, "height": 80, "backgroundColor": "#c3fae8", "fillStyle": "solid", "roundness": {"type": 3}},
+    {"type": "text", "id": "t_r6", "x": 525, "y": 225, "width": 170, "height": 25, "text": "Redis", "fontSize": 20, "strokeColor": "#1e1e1e", "containerId": "r6"},
+    
+    {"type": "arrow", "id": "a1", "x": 230, "y": 120, "width": 70, "height": 0, "points": [[0,0],[70,0]], "endArrowhead": "arrow"},
+    {"type": "text", "id": "t_a1", "x": 260, "y": 100, "width": 50, "height": 20, "text": "8082", "fontSize": 16, "strokeColor": "#1e1e1e", "containerId": "a1"},
+    
+    {"type": "arrow", "id": "a2", "x": 230, "y": 160, "width": 70, "height": 0, "points": [[0,0],[70,0]], "endArrowhead": "arrow"},
+    {"type": "text", "id": "t_a2", "x": 260, "y": 140, "width": 50, "height": 20, "text": "HTTP", "fontSize": 16, "strokeColor": "#1e1e1e", "containerId": "a2"},
+    
+    {"type": "arrow", "id": "a3", "x": 480, "y": 120, "width": 40, "height": 0, "points": [[0,0],[40,0]], "endArrowhead": "arrow"},
+    {"type": "text", "id": "t_a3", "x": 495, "y": 100, "width": 40, "height": 20, "text": "proxy", "fontSize": 16, "strokeColor": "#1e1e1e", "containerId": "a3"},
+    
+    {"type": "arrow", "id": "a4", "x": 230, "y": 250, "width": 70, "height": 0, "points": [[0,0],[70,0]], "endArrowhead": "arrow"},
+    {"type": "text", "id": "t_a4", "x": 260, "y": 230, "width": 50, "height": 20, "text": "9090", "fontSize": 16, "strokeColor": "#1e1e1e", "containerId": "a4"},
+    
+    {"type": "arrow", "id": "a5", "x": 230, "y": 290, "width": 70, "height": 0, "points": [[0,0],[70,0]], "endArrowhead": "arrow"},
+    {"type": "text", "id": "t_a5", "x": 260, "y": 270, "width": 60, "height": 20, "text": "internal", "fontSize": 16, "strokeColor": "#1e1e1e", "containerId": "a5"},
+    
+    {"type": "arrow", "id": "a6", "x": 480, "y": 250, "width": 140, "height": 0, "points": [[0,0],[140,0]], "endArrowhead": "arrow"},
+    {"type": "text", "id": "t_a6", "x": 540, "y": 230, "width": 40, "height": 20, "text": "3000", "fontSize": 16, "strokeColor": "#1e1e1e", "containerId": "a6"},
+    
+    {"type": "text", "id": "label1", "x": 60, "y": 400, "width": 200, "height": 20, "text": "Ports exposed to host", "fontSize": 18, "strokeColor": "#1e1e1e"},
+    {"type": "text", "id": "label2", "x": 60, "y": 440, "width": 400, "height": 20, "text": "8082: Caddy UI | 9090: Search JSON API | 3000: Scraper API", "fontSize": 16, "strokeColor": "#495057"}
+  ],
+  "appState": {"viewBackgroundColor": "#ffffff"}
+}

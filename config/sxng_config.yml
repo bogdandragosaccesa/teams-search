@@ -1,0 +1,20 @@
+# sxng_config.yml — SearXNG search engine config
+general:
+  debug: false
+  instance_name: "teams-search local"
+  default_lang: en
+  locale: "en-US"
+
+search:
+  languages: all
+  safe_search: 0
+  engines: []
+  # Enable JSON format endpoint
+  formats:
+    - html
+    - json
+
+server:
+  port: 8080
+  method: GET
+  secret_key: "teamssearch-secret-key-2024"

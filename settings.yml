@@ -1,0 +1,9 @@
+# SearXNG settings - override formats to enable JSON endpoint
+# The default only has html enabled; we add json, csv, rss
+
+search:
+  formats:
+    - html
+    - json
+    - csv
+    - rss

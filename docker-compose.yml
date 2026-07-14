@@ -1,0 +1,82 @@
+# docker-compose.yml: SearXNG + Scraper API (redis + searxng + caddy + scraper)
+
+services:
+    redis:
+        image: redis:7-alpine
+        container_name: firecrawl_redis
+        restart: unless-stopped
+        command: >
+            redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 3s
+            retries: 10
+        networks:
+            - search_net
+
+    searxng:
+        image: ghcr.io/searxng/searxng:latest
+        container_name: searxng
+        restart: unless-stopped
+        expose:
+            - "8080"
+        volumes:
+            - ./config/sxng_config.yml:/etc/searxng/searxng.yml
+            - ./config/limiter.toml:/etc/searxng/limiter.toml
+        environment:
+            - BASE_URL=http://localhost:8082/
+            - USE_CELERY=false
+            - RATE_LIMIT=0
+            - BYPASS_BLOCKLIST=true
+        networks:
+            - search_net
+
+    caddy_proxy:
+        image: caddy:2-alpine
+        container_name: caddy_proxy
+        restart: unless-stopped
+        ports:
+            - "8082:8080"
+        volumes:
+            - ./config/Caddyfile:/etc/caddy/Caddyfile
+            - caddy_data:/data
+            - caddy_config:/config
+        depends_on:
+            - searxng
+        networks:
+            - search_net
+
+    scraper_api:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: scraper_api
+        restart: unless-stopped
+        ports:
+            - "3000:3000"
+        networks:
+            - search_net
+
+    search_api:
+        build:
+            context: .
+            dockerfile: Dockerfile.search
+        container_name: search_api
+        restart: unless-stopped
+        ports:
+            - "9090:9090"
+        environment:
+            - SEARXNG_URL=http://searxng:8080
+        networks:
+            - search_net
+        depends_on:
+            - searxng
+
+networks:
+    search_net:
+        driver: bridge
+
+volumes:
+    caddy_data:
+    caddy_config:
