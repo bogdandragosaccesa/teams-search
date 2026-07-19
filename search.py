@@ -11,6 +11,9 @@ import requests as http_client
 from flask import Flask, request, jsonify
 
 SEARXNG_URL = os.environ.get("SEARXNG_URL", "http://searxng:8080")
+# IP forwarded to SearXNG bot detection for internal container-to-container calls.
+# Defaults to the docker-compose gateway; override if your subnet differs.
+SEARXNG_TRUSTED_IP = os.environ.get("SEARXNG_TRUSTED_IP", "172.20.0.1")
 LISTEN_HOST = "0.0.0.0"
 LISTEN_PORT = int(os.environ.get("PORT", 9090))
 # Require a shared API key when API_KEY is set (empty = open, for trusted LAN only).
@@ -68,6 +71,10 @@ def do_search():
             f"{SEARXNG_URL}/search",
             params={"q": query, "format": "json"},
             timeout=30,
+            # SearXNG bot detection requires a client-IP header on internal
+            # container-to-container requests. Spoof the docker gateway IP
+            # (trusted via limiter.toml pass_ip) for our self-hosted instance.
+            headers={"X-Real-IP": SEARXNG_TRUSTED_IP, "X-Forwarded-For": SEARXNG_TRUSTED_IP},
         )
         if resp.status_code != 200:
             return jsonify({"error": f"SearXNG HTTP {resp.status_code}"}), resp.status_code
