@@ -82,7 +82,7 @@ services:
         ports:
             - "9090:9090"
         environment:
-            - SEARXNG_URL=http://caddy_proxy:8080
+            - SEARXNG_URL=http://searxng:8080
             - SEARCH_API_KEY=${SEARCH_API_KEY:-}
         depends_on:
             searxng:
