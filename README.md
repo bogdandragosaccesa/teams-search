@@ -1,56 +1,69 @@
 # Teams Search Stack
 
-Self-hosted SearXNG search engine with Docker Compose deployment, featuring a Firecrawl-compatible scraper API.
+Self-hosted SearXNG metasearch engine with a Docker Compose deployment, a JSON
+Search API, and a Firecrawl-compatible scraper API. Private, no third-party API
+keys required for the query path.
+
+Current build: **v1.1.0** (see [CHANGELOG.md](./CHANGELOG.md)).
 
 ## Stack Architecture (Docker Compose)
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                                                         │
-│  Port 8082 ── caddy_proxy ── SearXNG (internal 8080)   │
-│       │                                                 │
-│       └─ HTML Search UI                                 │
-│                                                         │
-│  Port 9090 ── search_api ── searxng:8080              │
-│       │                                                 │
-│       └─ `/api/search?q=QUERY` (JSON response)          │
-│                                                         │
-│  Port 3000 ── scraper_api                              │
-│       │                                                 │
-│       └─ `/scrape` (Firecrawl-compatible)              │
-│                                                         │
-│  Redis (internal) ── Queue for background jobs           │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                          host (ubuntu-pc)                      │
+│                                                                │
+│  Port 8082 ── caddy_proxy ──┐                                  │
+│       │                     │ forwards X-Real-IP / X-Forwarded-│
+│       └─ HTML Search UI     ▼                                  │
+│                          SearXNG (internal :8080)              │
+│                               ▲                                 │
+│  Port 9090 ── search_api ────┘  (native /search?format=json)   │
+│       │  /api/search?q=QUERY  -> {"query","results","total"}   │
+│                                                                │
+│  Port 3000 ── scraper_api (Firecrawl-compatible)               │
+│       │  /scrape  (markdown)   /extract (structured)           │
+│       │  /api/v0/health                                       │
+│                                                                │
+│  No Redis — removed (declared but never consumed).            │
+└──────────────────────────────────────────────────────────────┘
 ```
+
+All containers share the `search_net` Docker network (172.20.0.0/16).
+SearXNG, search_api and scraper_api communicate internally; only caddy (8082),
+search_api (9090) and scraper_api (3000) publish host ports.
 
 ## Quick Start
 
 ```bash
-# Clone and run
 git clone https://github.com/bogdandragosaccesa/teams-search
 cd teams-search
-docker compose up -d
+cp .env.example .env        # edit if you want API keys / custom secret
+SEARXNG_SECRET_KEY="$(openssl rand -hex 32)" docker compose up -d --build
 
 # Check services
 docker compose ps
+curl -s "http://localhost:9090/api/search?q=python" | python3 -m json.tool
 ```
 
 ## API Endpoints
 
 ### Search API (JSON)
 ```bash
-curl "http://localhost:9090/api/search?q=python&format=json"
-# Returns: {"query": "python", "total_results": 30, "results": [...]}
+curl "http://localhost:9090/api/search?q=python"
+# -> {"query": "python", "total_results": 25, "results": [{"title","url","content","engine","score"}]}
 ```
+- Optional Bearer auth when `SEARCH_API_KEY` is set in the environment:
+  `curl -H "Authorization: Bearer $SEARCH_API_KEY" ...`. Open (no key) by default.
 
 ### Scraper API (Firecrawl-compatible)
 ```bash
 curl -X POST http://localhost:3000/scrape \
   -H "Content-Type: application/json" \
-  -d '{"url":"https://example.com"}'
-# Returns: {"success": true, "data": {"markdown": "...", "title": "..."}}
+  -d '{"url":"https://example.com","formats":["markdown"]}'
+# -> {"data": {"markdown": "..."}}
 ```
+Other routes: `/extract` (POST, structured field extraction),
+`/api/v0/health` (GET, 200 = alive).
 
 ### Web UI
 ```bash
@@ -59,51 +72,68 @@ open http://localhost:8082
 
 ## Services
 
-| Service | Port | Description |
-|---------|------|-------------|
-| `caddy_proxy` | 8082 | Reverse proxy to SearXNG |
-| `search_api` | 9090 | JSON API wrapper (parses HTML → JSON) |
-| `scraper_api` | 3000 | Firecrawl-compatible web scraper |
-| `searxng` | internal | Search engine core |
-| `redis` | internal | Job queue |
+| Service      | Port (host) | Description |
+|--------------|-------------|-------------|
+| `caddy_proxy`| 8082        | Reverse proxy + static UI to SearXNG |
+| `search_api` | 9090        | JSON API over SearXNG native `format=json` |
+| `scraper_api`| 3000        | Firecrawl-compatible web scraper / extractor |
+| `searxng`    | internal    | SearXNG search core (no host port) |
 
 ## Configuration
 
-- `config/limiter.toml` - Bot detection bypass (wildcard `0.0.0.0/0` for local dev)
-- `config/sxng_config.yml` - SearXNG engine configuration
-- `config/Caddyfile` - Caddy reverse proxy rules
+- `config/sxng_config.yml` — SearXNG settings. **Mounted at
+  `/etc/searxng/settings.yml`** (SearXNG's actual path; a `searxng.yml` name is
+  silently ignored). Allows `html`/`json`/`csv`/`rss` output formats;
+  `server.bind_address: 0.0.0.0`.
+- `config/limiter.toml` — bot detection config. `link_token = false`,
+  `filter_link_local = false`, `trusted_proxies` includes the Docker subnet.
+  Mounted at `/etc/searxng/limiter.toml`.
+- `config/Caddyfile` — Caddy reverse proxy; forwards `X-Real-IP` /
+  `X-Forwarded-For` to SearXNG for client-IP attribution.
 
 ## Environment Variables
 
 ```yaml
-SEARXNG_URL=http://searxng:8080    # Internal SearXNG endpoint
-RATE_LIMIT=0                        # Disable rate limiting
-BYPASS_BLOCKLIST=true                 # Bypass bot detection
+SEARXNG_SECRET_KEY=...          # random; openssl rand -hex 32
+SEARXNG_URL=http://searxng:8080 # internal SearXNG endpoint (search_api)
+SEARCH_API_KEY=                 # optional Bearer token for /api/search
+SCRAPER_API_KEY=                # optional Bearer token for scraper_api
+SEARXNG_TRUSTED_IP=172.20.0.1   # spoofed client IP for internal requests
 ```
 
 ## Security & Hardening
 
-This stack ships with **dev-friendly defaults** (rate limiting off, bot-detection
-bypass on, a known placeholder `secret_key`). Those are fine on a trusted LAN but
-**must not** be used on an internet-exposed host.
+This stack ships with **dev-friendly defaults** (bot detection off via
+`limiter.toml`, no API keys, a per-deploy random `secret_key`). Those are fine
+on a trusted single-host LAN but **must not** be used on an internet-exposed host.
 
 Before exposing it (e.g. on a public domain behind your reverse proxy / SSO):
 
-1. Set a random `SEARXNG_SECRET_KEY` — `openssl rand -hex 32`.
-2. Set `RATE_LIMIT=1` and `BYPASS_BLOCKLIST=false` in `.env`.
-3. Set `SEARCH_API_KEY` / `SCRAPER_API_KEY` so the APIs require a Bearer token.
-4. Do **not** publish ports 3000/9090 directly — front them with Caddy/your SSO.
-5. `config/limiter.toml` trusts `0.0.0.0/0` for local dev; tighten the
-   `trusted_proxies` list before production use.
+1. Set a persistent random `SEARXNG_SECRET_KEY` (not regenerated per start).
+2. Set `SEARCH_API_KEY` / `SCRAPER_API_KEY` so the APIs require a Bearer token.
+3. Do **not** publish ports 3000/9090 directly — front them with Caddy/your SSO.
+4. Tighten `trusted_proxies` in `config/limiter.toml` before production use.
 
 Copy `.env.example` → `.env` and edit. `.env` is git-ignored.
 
-### What changed vs. v1.0.0 (hardening branch)
-- `search_api` now uses SearXNG's native `/search?format=json` (no HTML scraping).
-- `secret_key`, rate-limit and bypass flags are environment-driven (no hardcoded secret).
-- Both APIs run under **gunicorn** (production WSGI), not the Flask dev server.
-- Healthchecks added to every service; the stack self-heals.
-- Redis removed (declared but never consumed by the code).
+## Hermes Integration
+
+This stack is wired as a private search/scrape backend for Hermes (the AI agent
+on this host). See the `teams-search-hermes-wiring` skill: Hermes queries
+`localhost:9090` / `localhost:3000` directly — no egress to external search
+providers. (No TLS required for localhost; an internal domain with a self-signed
+cert is optional and not yet added.)
+
+## What changed in v1.1.0 (vs v1.0.0)
+
+- **403 fixed** — root cause was `search.formats` allowing only `html`;
+  `format=json` now permitted. Also corrected the config mount path
+  (`settings.yml`, not `searxng.yml`) and `bind_address: 0.0.0.0`.
+- `search_api` uses SearXNG's native `/search?format=json` (no HTML scraping).
+- `secret_key` and rate-limit/bypass flags are environment-driven.
+- Both APIs run under **gunicorn** (production WSGI).
+- Healthchecks on every service; stack self-heals.
+- Redis removed (declared but never consumed).
 
 ## License
 
