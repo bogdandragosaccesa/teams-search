@@ -1,20 +1,16 @@
-# docker-compose.yml: SearXNG + Scraper API (redis + searxng + caddy + scraper)
+# docker-compose.yml: SearXNG + Scraper API (searxng + caddy + scraper + search)
+#
+# Hardened variant:
+#  - secret_key + rate-limit/bypass flags come from environment (.env), never hardcoded
+#  - APIs served by gunicorn (production WSGI) instead of Flask dev server
+#  - healthchecks on every service so the stack self-heals
+#  - redis removed (declared but never consumed by the code)
+#
+# For a PUBLIC host, set in .env:
+#   SEARXNG_SECRET_KEY=<random>   RATE_LIMIT=1   BYPASS_BLOCKLIST=false
+# and put search_api/scraper_api behind your reverse proxy / SSO, not raw ports.
 
 services:
-    redis:
-        image: redis:7-alpine
-        container_name: firecrawl_redis
-        restart: unless-stopped
-        command: >
-            redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
-        healthcheck:
-            test: ["CMD", "redis-cli", "ping"]
-            interval: 10s
-            timeout: 3s
-            retries: 10
-        networks:
-            - search_net
-
     searxng:
         image: ghcr.io/searxng/searxng:latest
         container_name: searxng
@@ -22,13 +18,20 @@ services:
         expose:
             - "8080"
         volumes:
-            - ./config/sxng_config.yml:/etc/searxng/searxng.yml
-            - ./config/limiter.toml:/etc/searxng/limiter.toml
+            - ./config/sxng_config.yml:/etc/searxng/searxng.yml:ro
+            - ./config/limiter.toml:/etc/searxng/limiter.toml:ro
         environment:
-            - BASE_URL=http://localhost:8082/
+            - BASE_URL=${BASE_URL:-http://localhost:8082/}
             - USE_CELERY=false
-            - RATE_LIMIT=0
-            - BYPASS_BLOCKLIST=true
+            # Dev-friendly defaults; override in .env for production.
+            - RATE_LIMIT=${RATE_LIMIT:-0}
+            - BYPASS_BLOCKLIST=${BYPASS_BLOCKLIST:-true}
+            - SEARXNG_SECRET_KEY=${SEARXNG_SECRET_KEY:-teamssearch-dev-secret}
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+            interval: 15s
+            timeout: 5s
+            retries: 10
         networks:
             - search_net
 
@@ -39,11 +42,12 @@ services:
         ports:
             - "8082:8080"
         volumes:
-            - ./config/Caddyfile:/etc/caddy/Caddyfile
+            - ./config/Caddyfile:/etc/caddy/Caddyfile:ro
             - caddy_data:/data
             - caddy_config:/config
         depends_on:
-            - searxng
+            searxng:
+                condition: service_healthy
         networks:
             - search_net
 
@@ -53,8 +57,18 @@ services:
             dockerfile: Dockerfile
         container_name: scraper_api
         restart: unless-stopped
+        # Gunicorn WSGI server (production) instead of Flask dev server.
+        command: gunicorn -w 2 -b 0.0.0.0:3000 --timeout 60 scraper_api:app
         ports:
             - "3000:3000"
+        environment:
+            - FIRECRAWL_PORT=3000
+            - API_KEY=${SCRAPER_API_KEY:-}
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:3000/api/v0/health"]
+            interval: 15s
+            timeout: 5s
+            retries: 10
         networks:
             - search_net
 
@@ -64,14 +78,22 @@ services:
             dockerfile: Dockerfile.search
         container_name: search_api
         restart: unless-stopped
+        command: gunicorn -w 2 -b 0.0.0.0:9090 --timeout 60 search:app
         ports:
             - "9090:9090"
         environment:
             - SEARXNG_URL=http://searxng:8080
+            - SEARCH_API_KEY=${SEARCH_API_KEY:-}
+        depends_on:
+            searxng:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+            interval: 15s
+            timeout: 5s
+            retries: 10
         networks:
             - search_net
-        depends_on:
-            - searxng
 
 networks:
     search_net:
