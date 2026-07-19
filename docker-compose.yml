@@ -18,7 +18,8 @@ services:
         expose:
             - "8080"
         volumes:
-            - ./config/sxng_config.yml:/etc/searxng/searxng.yml:ro
+            # SearXNG reads /etc/searxng/settings.yml (NOT searxng.yml).
+            - ./config/sxng_config.yml:/etc/searxng/settings.yml:ro
             # Bot detection is disabled for this self-hosted instance
             # (limiter: false in sxng_config.yml). Mounting limiter.toml
             # re-enables it and 403s internal container-to-container traffic.
