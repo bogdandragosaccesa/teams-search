@@ -19,7 +19,10 @@ services:
             - "8080"
         volumes:
             - ./config/sxng_config.yml:/etc/searxng/searxng.yml:ro
-            - ./config/limiter.toml:/etc/searxng/limiter.toml:ro
+            # Bot detection is disabled for this self-hosted instance
+            # (limiter: false in sxng_config.yml). Mounting limiter.toml
+            # re-enables it and 403s internal container-to-container traffic.
+            # - ./config/limiter.toml:/etc/searxng/limiter.toml:ro
         environment:
             - BASE_URL=${BASE_URL:-http://localhost:8082/}
             - USE_CELERY=false
