@@ -1,6 +1,10 @@
 # sxng_config.yml — SearXNG search engine config
 # NOTE: secret_key and rate-limit/bypass flags are supplied via environment
 # (see docker-compose.yml + .env.example). Do NOT hardcode a production secret here.
+# Self-hosted private instance: disable the rate limiter / bot detection
+# (internal container-to-container traffic would otherwise be blocked).
+limiter: false
+
 general:
   debug: false
   instance_name: "teams-search"
