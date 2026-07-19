@@ -28,7 +28,7 @@ services:
             - BYPASS_BLOCKLIST=${BYPASS_BLOCKLIST:-true}
             - SEARXNG_SECRET_KEY=${SEARXNG_SECRET_KEY:-teamssearch-dev-secret}
         healthcheck:
-            test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+            test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/healthz"]
             interval: 15s
             timeout: 5s
             retries: 10
