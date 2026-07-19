@@ -81,6 +81,30 @@ RATE_LIMIT=0                        # Disable rate limiting
 BYPASS_BLOCKLIST=true                 # Bypass bot detection
 ```
 
+## Security & Hardening
+
+This stack ships with **dev-friendly defaults** (rate limiting off, bot-detection
+bypass on, a known placeholder `secret_key`). Those are fine on a trusted LAN but
+**must not** be used on an internet-exposed host.
+
+Before exposing it (e.g. on a public domain behind your reverse proxy / SSO):
+
+1. Set a random `SEARXNG_SECRET_KEY` — `openssl rand -hex 32`.
+2. Set `RATE_LIMIT=1` and `BYPASS_BLOCKLIST=false` in `.env`.
+3. Set `SEARCH_API_KEY` / `SCRAPER_API_KEY` so the APIs require a Bearer token.
+4. Do **not** publish ports 3000/9090 directly — front them with Caddy/your SSO.
+5. `config/limiter.toml` trusts `0.0.0.0/0` for local dev; tighten the
+   `trusted_proxies` list before production use.
+
+Copy `.env.example` → `.env` and edit. `.env` is git-ignored.
+
+### What changed vs. v1.0.0 (hardening branch)
+- `search_api` now uses SearXNG's native `/search?format=json` (no HTML scraping).
+- `secret_key`, rate-limit and bypass flags are environment-driven (no hardcoded secret).
+- Both APIs run under **gunicorn** (production WSGI), not the Flask dev server.
+- Healthchecks added to every service; the stack self-heals.
+- Redis removed (declared but never consumed by the code).
+
 ## License
 
 MIT License

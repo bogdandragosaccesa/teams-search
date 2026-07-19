@@ -1,15 +1,17 @@
 # sxng_config.yml — SearXNG search engine config
+# NOTE: secret_key and rate-limit/bypass flags are supplied via environment
+# (see docker-compose.yml + .env.example). Do NOT hardcode a production secret here.
 general:
   debug: false
-  instance_name: "teams-search local"
+  instance_name: "teams-search"
   default_lang: en
   locale: "en-US"
 
 search:
   languages: all
+  # safe_search: 0 = off, 1 = moderate, 2 = strict. Set 1+ for shared instances.
   safe_search: 0
   engines: []
-  # Enable JSON format endpoint
   formats:
     - html
     - json
@@ -17,4 +19,6 @@ search:
 server:
   port: 8080
   method: GET
-  secret_key: "teamssearch-secret-key-2024"
+  # Secret is injected via SEARXNG_SECRET_KEY (compose -> environment).
+  # A random value is required in production; the env default is for local dev only.
+  secret_key: "${SEARXNG_SECRET_KEY:teamssearch-dev-secret}"

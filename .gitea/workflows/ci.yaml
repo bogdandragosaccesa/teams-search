@@ -1,0 +1,43 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+      - hardening
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate docker-compose syntax
+        run: |
+          docker compose -f docker-compose.yml config >/dev/null && echo "compose OK"
+
+      - name: Python syntax check (compile all modules)
+        run: |
+          python3 -m py_compile search.py scraper_api.py && echo "py compile OK"
+
+      - name: Check no hardcoded secret_key placeholder in committed config
+        run: |
+          if grep -rq "teamssearch-secret-key-2024" config/ ; then
+            echo "ERROR: hardcoded production secret found"; exit 1
+          fi
+          echo "secret scan OK"
+
+      - name: Verify .env is git-ignored
+        run: |
+          if git ls-files --error-unmatch .env >/dev/null 2>&1; then
+            echo "ERROR: .env is tracked"; exit 1
+          fi
+          echo ".env ignore OK"
+
+      - name: Requirements present + gunicorn pinned
+        run: |
+          test -f requirements.txt || { echo "missing requirements.txt"; exit 1; }
+          grep -q "^gunicorn" requirements.txt || { echo "gunicorn missing"; exit 1; }
+          echo "requirements OK"
