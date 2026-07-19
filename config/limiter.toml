@@ -1,0 +1,39 @@
+# limiter.toml — SearXNG bot detection / rate limiting
+# Self-hosted private instance: bot detection disabled.
+# - link_token = false  -> no suspicious-request blocking (was 403 on /search?format=json)
+# - filter_link_local = false -> internal Docker-network IPs are not rate-limited
+# - API_WINDOW limit effectively disabled (high ceiling)
+
+[botdetection]
+
+ipv4_prefix = 32
+ipv6_prefix = 48
+
+trusted_proxies = [
+   '127.0.0.0/8',
+   '::1',
+   '192.168.0.0/16',
+   '172.16.0.0/12',
+   '172.20.0.0/16',
+   '10.0.0.0/8',
+   'fd00::/8',
+   'fe80::/10',
+   '0.0.0.0/0',
+]
+
+[botdetection.ip_limit]
+filter_link_local = false
+link_token = false
+
+[botdetection.ip_lists]
+
+block_ip = []
+
+pass_ip = [
+   '172.16.0.0/12',
+   '172.20.0.0/16',
+   '10.0.0.0/8',
+   '192.168.0.0/16',
+]
+
+pass_searxng_org = true
