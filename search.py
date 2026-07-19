@@ -68,6 +68,7 @@ def do_search():
             f"{SEARXNG_URL}/search",
             params={"q": query, "format": "json"},
             timeout=30,
+            headers={"X-Forwarded-For": "127.0.0.1", "X-Real-IP": "127.0.0.1"},
         )
         if resp.status_code != 200:
             return jsonify({"error": f"SearXNG HTTP {resp.status_code}"}), resp.status_code
